@@ -20,21 +20,21 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # 1. 现场生成通用证书 (这就相当于买了把新锁)
+    # 🔥 第一步：现场造一把通用的“假钥匙”
+    # 注意：我把它直接放在 app 目录下，方便下面调用
     - name: Generate Debug Keystore
       run: |
-        mkdir -p ~/.android
-        keytool -genkey -v -keystore ~/.android/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+        keytool -genkey -v -keystore app/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
 
-    # 2. 🔥 彻底清洗：删除所有旧密码、旧别名、旧配置
-    # 只要这几行删干净了，Gradle 就只能用上面的默认证书，绝无报错可能！
-    - name: Nuke Signing Configs
+    # 🔥 第二步：偷梁换柱（关键修复！）
+    # 我们不删除任何行（防止破坏花括号），而是把原作者的配置“替换”成我们的
+    # 这样代码结构完全不变，但内容变成了我们刚生成的这把钥匙
+    - name: Hijack Signing Config
       run: |
-        sed -i '/signingConfig/d' app/build.gradle
-        sed -i '/storeFile/d' app/build.gradle
-        sed -i '/storePassword/d' app/build.gradle
-        sed -i '/keyAlias/d' app/build.gradle
-        sed -i '/keyPassword/d' app/build.gradle
+        sed -i 's/storeFile file.*/storeFile file("debug.keystore")/g' app/build.gradle
+        sed -i 's/storePassword.*/storePassword "android"/g' app/build.gradle
+        sed -i 's/keyAlias.*/keyAlias "androiddebugkey"/g' app/build.gradle
+        sed -i 's/keyPassword.*/keyPassword "android"/g' app/build.gradle
 
     - name: Build with Gradle (Debug Mode)
       run: ./gradlew assembleDebug -x lint
