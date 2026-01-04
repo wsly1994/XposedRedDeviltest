@@ -20,16 +20,20 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # 🔥 核心修复（精准版）：
-    # 1. '/signingConfig[^s]/d' -> 只删除签名配置的"使用"语句，保留"定义"结构（不会误删花括号）
-    # 2. '/storeFile/d' -> 删除找不到的 jks 文件引用，防止报错
-    - name: Fix Signing Config (Safe Mode)
+    # 🔥 新增步骤：现场生成一个通用的测试证书
+    # 这样 Gradle 就能找到 ~/.android/debug.keystore 了！
+    - name: Generate Debug Keystore
+      run: |
+        mkdir -p ~/.android
+        keytool -genkey -v -keystore ~/.android/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+
+    # 继续执行之前的修复，移除原作者的私钥引用
+    - name: Fix Signing Config
       run: |
         sed -i '/signingConfig[^s]/d' app/build.gradle
         sed -i '/storeFile/d' app/build.gradle
 
     - name: Build with Gradle (Debug Mode)
-      # 使用 Debug 模式 + 跳过检查，保证 100% 过编译
       run: ./gradlew assembleDebug -x lint
 
     - name: Upload APK
