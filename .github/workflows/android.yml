@@ -20,13 +20,19 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    # 🔥 核心修复步骤：使用 sed 命令强行删除 build.gradle 里所有关于签名的配置
+    # 删掉后，Gradle 就会找不到自定义签名，从而自动降级使用通用的测试签名
+    - name: Remove Broken Signing Config
+      run: |
+        sed -i '/signingConfig/d' app/build.gradle
+        sed -i '/signingConfigs/d' app/build.gradle
+        sed -i '/storeFile/d' app/build.gradle
+
     - name: Build with Gradle (Debug Mode)
-      # 这里的 assembleDebug 会自动使用通用签名，生成的 APK 就能装了！
       run: ./gradlew assembleDebug -x lint
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        # 注意这里路径也变成了 debug
         path: app/build/outputs/apk/debug/*.apk
